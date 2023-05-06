@@ -1,5 +1,14 @@
 name: Go test
-on: [push, pull_request]
+
+on:
+  push:
+    branches:
+      - "master"
+      - "develop"
+    tags:
+      - 'v*'
+  pull_request:
+
 jobs:
   test:
     name: Test
