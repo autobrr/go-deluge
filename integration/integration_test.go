@@ -24,8 +24,6 @@ import (
 	"log"
 	"os"
 	"testing"
-
-	delugeclient "github.com/gdm85/go-libdeluge"
 )
 
 const (
@@ -34,9 +32,9 @@ const (
 )
 
 var (
-	deluge   delugeclient.DelugeClient
-	c        *delugeclient.Client
-	settings = delugeclient.Settings{
+	deluge   deluge.DelugeClient
+	c        *deluge.Client
+	settings = deluge.Settings{
 		Hostname: "127.0.0.1",
 		Port:     58846,
 		Login:    "localclient",
@@ -57,20 +55,20 @@ func TestMain(m *testing.M) {
 	os.Exit(exitCode)
 }
 
-func prepareClient(settings delugeclient.Settings) error {
+func prepareClient(settings deluge.Settings) error {
 	settings.DebugServerResponses = true
 
 	if v2daemon {
-		cli := delugeclient.NewV2(settings)
+		cli := deluge.NewV2(settings)
 		c = &cli.Client
 		deluge = cli
 	} else {
-		c = delugeclient.NewV1(settings)
+		c = deluge.NewV1(settings)
 		deluge = c
 	}
 
 	// perform connection to Deluge server
-	err := deluge.Connect()
+	err := deluge.Connect(nil)
 	if err != nil {
 		return fmt.Errorf("connection failed: %w", err)
 	}
@@ -88,7 +86,7 @@ func TestDaemonVersion(t *testing.T) {
 }
 
 func TestMethodsList(t *testing.T) {
-	methods, err := deluge.MethodsList()
+	methods, err := deluge.MethodsList(nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -148,7 +146,7 @@ func TestAddMagnetAndCheckStatus(t *testing.T) {
 		t.Error("torrent was not added")
 	}
 
-	torrents, err := deluge.TorrentsStatus(delugeclient.StateUnspecified, nil)
+	torrents, err := deluge.TorrentsStatus(deluge.StateUnspecified, nil)
 	if err != nil {
 		t.Error(err)
 	} else {

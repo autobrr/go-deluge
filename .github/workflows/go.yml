@@ -1,72 +1,70 @@
-name: Go build and Deluge integration
-on: [push, pull_request]
+name: Go test
+
+on:
+  push:
+    branches:
+      - "master"
+      - "develop"
+    tags:
+      - 'v*'
+  pull_request:
+
 jobs:
-
-  build:
-    name: Build
-    runs-on: ubuntu-18.04
+  test:
+    name: Test
+    runs-on: ubuntu-latest
     steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
 
-    - name: Set up Go
-      uses: actions/setup-go@v2
-      with:
-        go-version: 1.16
-      id: go
+      # 1.20 is the last version to support Windows < 10, Server < 2016, and MacOS < 1.15.
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.20.3'
+          cache: true
 
-    - name: Check out repository
-      uses: actions/checkout@v1
+      - name: Test
+        run: go test -v ./...
 
-    - name: Linux build
-      run: |
-        make all integration
-        cp scripts/deluge-install.sh bin/
-        cp scripts/deluge-integration.sh bin/
+#  integration_v2:
+#    name: Deluge v2.0.3 integration test
+#    needs: build
+#    runs-on: ubuntu-18.04
+#    steps:
+#
+#    - name: Download Linux build
+#      uses: actions/download-artifact@v1
+#      with:
+#        name: linux-amd64
+#        path: bin/
+#
+#    - name: Install Deluge v2.0.3
+#      run: |
+#        sudo bash bin/deluge-install.sh --v2
+#
+#    - name: Integration test
+#      run: |
+#        bash bin/deluge-integration.sh --v2
 
-    - name: Upload Linux build
-      uses: actions/upload-artifact@v1
-      with:
-        name: linux-amd64
-        path: bin/
-
-    - name: Windows build
-      run: make bin/delugecli-windows
-
-  integration_v2:
-    name: Deluge v2.0.3 integration test
-    needs: build
-    runs-on: ubuntu-18.04
-    steps:
-
-    - name: Download Linux build
-      uses: actions/download-artifact@v1
-      with:
-        name: linux-amd64
-        path: bin/
-
-    - name: Install Deluge v2.0.3
-      run: |
-        sudo bash bin/deluge-install.sh --v2
-
-    - name: Integration test
-      run: |
-        bash bin/deluge-integration.sh --v2
-
-  integration_v1:
-    name: Deluge v1.3 integration test
-    needs: build
-    runs-on: ubuntu-18.04
-    steps:
-
-    - name: Download Linux build
-      uses: actions/download-artifact@v1
-      with:
-        name: linux-amd64
-        path: bin/
-
-    - name: Install Deluge v1.3
-      run: |
-        sudo bash bin/deluge-install.sh --v1
-
-    - name: Integration test
-      run: |
-        bash bin/deluge-integration.sh --v1
+#  integration_v1:
+#    name: Deluge v1.3 integration test
+#    needs: build
+#    runs-on: ubuntu-18.04
+#    steps:
+#
+#    - name: Download Linux build
+#      uses: actions/download-artifact@v1
+#      with:
+#        name: linux-amd64
+#        path: bin/
+#
+#    - name: Install Deluge v1.3
+#      run: |
+#        sudo bash bin/deluge-install.sh --v1
+#
+#    - name: Integration test
+#      run: |
+#        bash bin/deluge-integration.sh --v1

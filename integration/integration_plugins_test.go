@@ -4,8 +4,9 @@
 package main
 
 import (
-	delugeclient "github.com/gdm85/go-libdeluge"
 	"testing"
+
+	"github.com/autobrr/go-deluge"
 )
 
 func enablePlugin(t *testing.T, name string) {
@@ -30,7 +31,7 @@ func TestLabelPluginGetLabels(t *testing.T) {
 	enablePlugin(t, "Label")
 	defer disablePlugin(t, "Label")
 
-	var labelPlugin = &delugeclient.LabelPlugin{Client: c}
+	var labelPlugin = &deluge.LabelPlugin{Client: c}
 
 	_, err := labelPlugin.GetLabels()
 	if err != nil {

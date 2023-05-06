@@ -12,20 +12,21 @@
 // along with this program; if not, write to the Free Software
 // Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
-package delugeclient
+package deluge
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/gdm85/go-rencode"
 )
 
 // GetFreeSpace returns the available free space; path is optional.
-func (c *Client) GetFreeSpace(path string) (int64, error) {
+func (c *Client) GetFreeSpace(ctx context.Context, path string) (int64, error) {
 	var args rencode.List
 	args.Add(path)
 
-	resp, err := c.rpc("core.get_free_space", args, rencode.Dictionary{})
+	resp, err := c.rpc(ctx, "core.get_free_space", args, rencode.Dictionary{})
 	if err != nil {
 		return 0, err
 	}
@@ -43,8 +44,8 @@ func (c *Client) GetFreeSpace(path string) (int64, error) {
 }
 
 // GetLibtorrentVersion returns the libtorrent version.
-func (c *Client) GetLibtorrentVersion() (string, error) {
-	resp, err := c.rpc("core.get_libtorrent_version", rencode.List{}, rencode.Dictionary{})
+func (c *Client) GetLibtorrentVersion(ctx context.Context) (string, error) {
+	resp, err := c.rpc(ctx, "core.get_libtorrent_version", rencode.List{}, rencode.Dictionary{})
 	if err != nil {
 		return "", err
 	}
@@ -62,11 +63,11 @@ func (c *Client) GetLibtorrentVersion() (string, error) {
 }
 
 // AddTorrentMagnet adds a torrent via magnet URI and returns the torrent hash.
-func (c *Client) AddTorrentMagnet(magnetURI string, options *Options) (string, error) {
+func (c *Client) AddTorrentMagnet(ctx context.Context, magnetURI string, options *Options) (string, error) {
 	var args rencode.List
 	args.Add(magnetURI, options.toDictionary(c.v2daemon))
 
-	resp, err := c.rpc("core.add_torrent_magnet", args, rencode.Dictionary{})
+	resp, err := c.rpc(ctx, "core.add_torrent_magnet", args, rencode.Dictionary{})
 	if err != nil {
 		return "", err
 	}
@@ -87,11 +88,11 @@ func (c *Client) AddTorrentMagnet(magnetURI string, options *Options) (string, e
 }
 
 // AddTorrentURL adds a torrent via a URL and returns the torrent hash.
-func (c *Client) AddTorrentURL(url string, options *Options) (string, error) {
+func (c *Client) AddTorrentURL(ctx context.Context, url string, options *Options) (string, error) {
 	var args rencode.List
 	args.Add(url, options.toDictionary(c.v2daemon))
 
-	resp, err := c.rpc("core.add_torrent_url", args, rencode.Dictionary{})
+	resp, err := c.rpc(ctx, "core.add_torrent_url", args, rencode.Dictionary{})
 	if err != nil {
 		return "", err
 	}
@@ -112,11 +113,11 @@ func (c *Client) AddTorrentURL(url string, options *Options) (string, error) {
 }
 
 // AddTorrentFile adds a torrent via a base64 encoded file and returns the torrent hash.
-func (c *Client) AddTorrentFile(fileName, fileContentBase64 string, options *Options) (string, error) {
+func (c *Client) AddTorrentFile(ctx context.Context, fileName, fileContentBase64 string, options *Options) (string, error) {
 	var args rencode.List
 	args.Add(fileName, fileContentBase64, options.toDictionary(c.v2daemon))
 
-	resp, err := c.rpc("core.add_torrent_file", args, rencode.Dictionary{})
+	resp, err := c.rpc(ctx, "core.add_torrent_file", args, rencode.Dictionary{})
 	if err != nil {
 		return "", err
 	}
@@ -159,11 +160,11 @@ func (t TorrentError) Error() string {
 // removed from the session, just because no errors have been returned,
 // as returned errors will primarily indicate that some of the supplied
 // torrent hashes were invalid.
-func (c *Client) RemoveTorrents(ids []string, rmFiles bool) ([]TorrentError, error) {
+func (c *Client) RemoveTorrents(ctx context.Context, ids []string, rmFiles bool) ([]TorrentError, error) {
 	var args rencode.List
 	args.Add(sliceToRencodeList(ids), rmFiles)
 
-	resp, err := c.rpc("core.remove_torrents", args, rencode.Dictionary{})
+	resp, err := c.rpc(ctx, "core.remove_torrents", args, rencode.Dictionary{})
 	if err != nil {
 		return nil, err
 	}
@@ -209,11 +210,11 @@ func (c *Client) RemoveTorrents(ids []string, rmFiles bool) ([]TorrentError, err
 // RemoveTorrent removes a single torrent, returning true if successful.
 // If `rmFiles` is set it also tries to delete all downloaded data for the
 // specified torrent.
-func (c *Client) RemoveTorrent(id string, rmFiles bool) (bool, error) {
+func (c *Client) RemoveTorrent(ctx context.Context, id string, rmFiles bool) (bool, error) {
 	var args rencode.List
 	args.Add(id, rmFiles)
 
-	resp, err := c.rpc("core.remove_torrent", args, rencode.Dictionary{})
+	resp, err := c.rpc(ctx, "core.remove_torrent", args, rencode.Dictionary{})
 	if err != nil {
 		return false, err
 	}
@@ -231,7 +232,7 @@ func (c *Client) RemoveTorrent(id string, rmFiles bool) (bool, error) {
 }
 
 // PauseTorrents pauses a group of torrents with the given IDs.
-func (c *Client) PauseTorrents(ids ...string) error {
+func (c *Client) PauseTorrents(ctx context.Context, ids ...string) error {
 	var args rencode.List
 	args.Add(sliceToRencodeList(ids))
 
@@ -239,7 +240,7 @@ func (c *Client) PauseTorrents(ids ...string) error {
 	if !c.v2daemon {
 		method = "core.pause_torrent"
 	}
-	resp, err := c.rpc(method, args, rencode.Dictionary{})
+	resp, err := c.rpc(ctx, method, args, rencode.Dictionary{})
 	if err != nil {
 		return err
 	}
@@ -251,7 +252,7 @@ func (c *Client) PauseTorrents(ids ...string) error {
 }
 
 // ResumeTorrents resumes a group of torrents with the given IDs.
-func (c *Client) ResumeTorrents(ids ...string) error {
+func (c *Client) ResumeTorrents(ctx context.Context, ids ...string) error {
 	var args rencode.List
 	args.Add(sliceToRencodeList(ids))
 
@@ -259,7 +260,7 @@ func (c *Client) ResumeTorrents(ids ...string) error {
 	if !c.v2daemon {
 		method = "core.resume_torrent"
 	}
-	resp, err := c.rpc(method, args, rencode.Dictionary{})
+	resp, err := c.rpc(ctx, method, args, rencode.Dictionary{})
 	if err != nil {
 		return err
 	}
@@ -271,11 +272,11 @@ func (c *Client) ResumeTorrents(ids ...string) error {
 }
 
 // MoveStorage will move the storage location of the group of torrents with the given IDs.
-func (c *Client) MoveStorage(torrentIDs []string, dest string) error {
+func (c *Client) MoveStorage(ctx context.Context, torrentIDs []string, dest string) error {
 	var args rencode.List
 	args.Add(sliceToRencodeList(torrentIDs), dest)
 
-	resp, err := c.rpc("core.move_storage", args, rencode.Dictionary{})
+	resp, err := c.rpc(ctx, "core.move_storage", args, rencode.Dictionary{})
 	if err != nil {
 		return err
 	}
@@ -287,16 +288,16 @@ func (c *Client) MoveStorage(torrentIDs []string, dest string) error {
 }
 
 // SessionState returns the current session state.
-func (c *Client) SessionState() ([]string, error) {
-	return c.rpcWithStringsResult("core.get_session_state")
+func (c *Client) SessionState(ctx context.Context) ([]string, error) {
+	return c.rpcWithStringsResult(ctx, "core.get_session_state")
 }
 
 // SetTorrentOptions updates options for the torrent with the given hash.
-func (c *Client) SetTorrentOptions(id string, options *Options) error {
+func (c *Client) SetTorrentOptions(ctx context.Context, id string, options *Options) error {
 	var args rencode.List
 	args.Add(id, options.toDictionary(c.v2daemon))
 
-	resp, err := c.rpc("core.set_torrent_options", args, rencode.Dictionary{})
+	resp, err := c.rpc(ctx, "core.set_torrent_options", args, rencode.Dictionary{})
 	if err != nil {
 		return err
 	}
@@ -309,7 +310,7 @@ func (c *Client) SetTorrentOptions(id string, options *Options) error {
 
 // SetTorrentTracker sets the primary tracker for the torrent with the
 // given hash to be `trackerURL`.
-func (c *Client) SetTorrentTracker(id, trackerURL string) error {
+func (c *Client) SetTorrentTracker(ctx context.Context, id, trackerURL string) error {
 	var tracker rencode.Dictionary
 	tracker.Add("url", trackerURL)
 	tracker.Add("tier", 0)
@@ -320,7 +321,7 @@ func (c *Client) SetTorrentTracker(id, trackerURL string) error {
 	var args rencode.List
 	args.Add(id, trackers)
 
-	resp, err := c.rpc("core.set_torrent_trackers", args, rencode.Dictionary{})
+	resp, err := c.rpc(ctx, "core.set_torrent_trackers", args, rencode.Dictionary{})
 	if err != nil {
 		return err
 	}
@@ -333,8 +334,8 @@ func (c *Client) SetTorrentTracker(id, trackerURL string) error {
 
 // KnownAccounts returns all known accounts, including password and
 // permission levels.
-func (c *ClientV2) KnownAccounts() ([]Account, error) {
-	resp, err := c.rpc("core.get_known_accounts", rencode.List{}, rencode.Dictionary{})
+func (c *ClientV2) KnownAccounts(ctx context.Context) ([]Account, error) {
+	resp, err := c.rpc(ctx, "core.get_known_accounts", rencode.List{}, rencode.Dictionary{})
 	if err != nil {
 		return nil, err
 	}
@@ -371,8 +372,8 @@ func (c *ClientV2) KnownAccounts() ([]Account, error) {
 // CreateAccount creates a new Deluge user with the supplied username,
 // password and permission level. The authenticated user must have an
 // authLevel of ADMIN to succeed.
-func (c *ClientV2) CreateAccount(account Account) (bool, error) {
-	resp, err := c.rpc("core.create_account", account.toList(), rencode.Dictionary{})
+func (c *ClientV2) CreateAccount(ctx context.Context, account Account) (bool, error) {
+	resp, err := c.rpc(ctx, "core.create_account", account.toList(), rencode.Dictionary{})
 	if err != nil {
 		return false, err
 	}
@@ -391,8 +392,8 @@ func (c *ClientV2) CreateAccount(account Account) (bool, error) {
 
 // UpdateAccount sets a new password and permission level for a account.
 // The authenticated user must have an authLevel of ADMIN to succeed.
-func (c *ClientV2) UpdateAccount(account Account) (bool, error) {
-	resp, err := c.rpc("core.update_account", account.toList(), rencode.Dictionary{})
+func (c *ClientV2) UpdateAccount(ctx context.Context, account Account) (bool, error) {
+	resp, err := c.rpc(ctx, "core.update_account", account.toList(), rencode.Dictionary{})
 	if err != nil {
 		return false, err
 	}
@@ -411,11 +412,11 @@ func (c *ClientV2) UpdateAccount(account Account) (bool, error) {
 
 // RemoveAccount will delete an existing username.
 // The authenticated user must have an authLevel of ADMIN to succeed.
-func (c *ClientV2) RemoveAccount(username string) (bool, error) {
+func (c *ClientV2) RemoveAccount(ctx context.Context, username string) (bool, error) {
 	var args rencode.List
 	args.Add(username)
 
-	resp, err := c.rpc("core.remove_account", args, rencode.Dictionary{})
+	resp, err := c.rpc(ctx, "core.remove_account", args, rencode.Dictionary{})
 	if err != nil {
 		return false, err
 	}
@@ -433,11 +434,11 @@ func (c *ClientV2) RemoveAccount(username string) (bool, error) {
 }
 
 // ForceReannounce will reannounce torrent status to associated tracker(s).
-func (c *Client) ForceReannounce(ids []string) error {
+func (c *Client) ForceReannounce(ctx context.Context, ids []string) error {
 	var args rencode.List
 	args.Add(sliceToRencodeList(ids))
 
-	resp, err := c.rpc("core.force_reannounce", args, rencode.Dictionary{})
+	resp, err := c.rpc(ctx, "core.force_reannounce", args, rencode.Dictionary{})
 	if err != nil {
 		return err
 	}
@@ -449,21 +450,21 @@ func (c *Client) ForceReannounce(ids []string) error {
 }
 
 // GetEnabledPlugins returns a list of enabled plugins.
-func (c *Client) GetEnabledPlugins() ([]string, error) {
-	return c.rpcWithStringsResult("core.get_enabled_plugins")
+func (c *Client) GetEnabledPlugins(ctx context.Context) ([]string, error) {
+	return c.rpcWithStringsResult(ctx, "core.get_enabled_plugins")
 }
 
 // GetAvailablePlugins returns a list of available plugins.
-func (c *Client) GetAvailablePlugins() ([]string, error) {
-	return c.rpcWithStringsResult("core.get_available_plugins")
+func (c *Client) GetAvailablePlugins(ctx context.Context) ([]string, error) {
+	return c.rpcWithStringsResult(ctx, "core.get_available_plugins")
 }
 
 // EnablePlugin enables the plugin with the given name.
-func (c *Client) EnablePlugin(name string) error {
+func (c *Client) EnablePlugin(ctx context.Context, name string) error {
 	var args rencode.List
 	args.Add(name)
 
-	resp, err := c.rpc("core.enable_plugin", args, rencode.Dictionary{})
+	resp, err := c.rpc(ctx, "core.enable_plugin", args, rencode.Dictionary{})
 	if err != nil {
 		return err
 	}
@@ -477,11 +478,11 @@ func (c *Client) EnablePlugin(name string) error {
 }
 
 // DisablePlugin disables the plugin with the given name.
-func (c *Client) DisablePlugin(name string) error {
+func (c *Client) DisablePlugin(ctx context.Context, name string) error {
 	var args rencode.List
 	args.Add(name)
 
-	resp, err := c.rpc("core.disable_plugin", args, rencode.Dictionary{})
+	resp, err := c.rpc(ctx, "core.disable_plugin", args, rencode.Dictionary{})
 	if err != nil {
 		return err
 	}
@@ -504,8 +505,8 @@ func sliceToRencodeList(s []string) rencode.List {
 }
 
 // TestListenPort checks if the active port is open.
-func (c *Client) TestListenPort() (bool, error) {
-	resp, err := c.rpc("core.test_listen_port", rencode.List{}, rencode.Dictionary{})
+func (c *Client) TestListenPort(ctx context.Context) (bool, error) {
+	resp, err := c.rpc(ctx, "core.test_listen_port", rencode.List{}, rencode.Dictionary{})
 	if err != nil {
 		return false, err
 	}
@@ -533,8 +534,8 @@ func (c *Client) TestListenPort() (bool, error) {
 }
 
 // GetListenPort returns the listen port of the deluge daemon.
-func (c *Client) GetListenPort() (uint16, error) {
-	resp, err := c.rpc("core.get_listen_port", rencode.List{}, rencode.Dictionary{})
+func (c *Client) GetListenPort(ctx context.Context) (uint16, error) {
+	resp, err := c.rpc(ctx, "core.get_listen_port", rencode.List{}, rencode.Dictionary{})
 	if err != nil {
 		return 0, err
 	}

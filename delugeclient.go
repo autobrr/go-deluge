@@ -12,13 +12,14 @@
 // along with this program; if not, write to the Free Software
 // Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
-// Package delugeclient allows calling native RPC methods on a remote
+// Package deluge allows calling native RPC methods on a remote
 // deluge server.
-package delugeclient
+package deluge
 
 import (
 	"bytes"
 	"compress/zlib"
+	"context"
 	"crypto/tls"
 	"encoding/binary"
 	"errors"
@@ -61,45 +62,45 @@ var (
 
 // DelugeClient is an interface for v1.3 and v2 Deluge servers.
 type DelugeClient interface {
-	Connect() error
+	Connect(ctx context.Context) error
 	Close() error
 
-	DaemonLogin() error
-	MethodsList() ([]string, error)
-	DaemonVersion() (string, error)
-	GetFreeSpace(string) (int64, error)
-	GetLibtorrentVersion() (string, error)
-	AddTorrentMagnet(magnetURI string, options *Options) (string, error)
-	AddTorrentURL(url string, options *Options) (string, error)
-	AddTorrentFile(fileName, fileContentBase64 string, options *Options) (string, error)
-	RemoveTorrents(ids []string, rmFiles bool) ([]TorrentError, error)
-	RemoveTorrent(id string, rmFiles bool) (bool, error)
-	PauseTorrents(ids ...string) error
-	ResumeTorrents(ids ...string) error
-	TorrentsStatus(state TorrentState, ids []string) (map[string]*TorrentStatus, error)
-	TorrentStatus(id string) (*TorrentStatus, error)
-	MoveStorage(torrentIDs []string, dest string) error
-	SetTorrentTracker(id, tracker string) error
-	SetTorrentOptions(id string, options *Options) error
-	SessionState() ([]string, error)
-	ForceReannounce(ids []string) error
-	GetAvailablePlugins() ([]string, error)
-	GetEnabledPlugins() ([]string, error)
-	EnablePlugin(name string) error
-	DisablePlugin(name string) error
-	TestListenPort() (bool, error)
-	GetListenPort() (uint16, error)
-	GetSessionStatus() (*SessionStatus, error)
+	DaemonLogin(ctx context.Context) error
+	MethodsList(ctx context.Context) ([]string, error)
+	DaemonVersion(ctx context.Context) (string, error)
+	GetFreeSpace(context.Context, string) (int64, error)
+	GetLibtorrentVersion(ctx context.Context) (string, error)
+	AddTorrentMagnet(ctx context.Context, magnetURI string, options *Options) (string, error)
+	AddTorrentURL(ctx context.Context, url string, options *Options) (string, error)
+	AddTorrentFile(ctx context.Context, fileName, fileContentBase64 string, options *Options) (string, error)
+	RemoveTorrents(ctx context.Context, ids []string, rmFiles bool) ([]TorrentError, error)
+	RemoveTorrent(ctx context.Context, id string, rmFiles bool) (bool, error)
+	PauseTorrents(ctx context.Context, ids ...string) error
+	ResumeTorrents(ctx context.Context, ids ...string) error
+	TorrentsStatus(ctx context.Context, state TorrentState, ids []string) (map[string]*TorrentStatus, error)
+	TorrentStatus(ctx context.Context, id string) (*TorrentStatus, error)
+	MoveStorage(ctx context.Context, torrentIDs []string, dest string) error
+	SetTorrentTracker(ctx context.Context, id, tracker string) error
+	SetTorrentOptions(ctx context.Context, id string, options *Options) error
+	SessionState(ctx context.Context) ([]string, error)
+	ForceReannounce(ctx context.Context, ids []string) error
+	GetAvailablePlugins(ctx context.Context) ([]string, error)
+	GetEnabledPlugins(ctx context.Context) ([]string, error)
+	EnablePlugin(ctx context.Context, name string) error
+	DisablePlugin(ctx context.Context, name string) error
+	TestListenPort(ctx context.Context) (bool, error)
+	GetListenPort(ctx context.Context) (uint16, error)
+	GetSessionStatus(ctx context.Context) (*SessionStatus, error)
 }
 
 // V2 is an interface for v2 Deluge clients.
 type V2 interface {
 	DelugeClient
 
-	KnownAccounts() ([]Account, error)
-	CreateAccount(account Account) (bool, error)
-	RemoveAccount(username string) (bool, error)
-	UpdateAccount(account Account) (bool, error)
+	KnownAccounts(ctx context.Context) ([]Account, error)
+	CreateAccount(ctx context.Context, account Account) (bool, error)
+	RemoveAccount(ctx context.Context, username string) (bool, error)
+	UpdateAccount(ctx context.Context, account Account) (bool, error)
 }
 
 // Client is a Deluge RPC client.
@@ -199,8 +200,8 @@ func (e RPCError) Error() string {
 	return fmt.Sprintf("RPC error %s('%s')\nTraceback: %s", e.ExceptionType, e.ExceptionMessage, e.TraceBack)
 }
 
-// DelugeResponse is a response returned from a completed RPC call.
-type DelugeResponse struct {
+// Response is a response returned from a completed RPC call.
+type Response struct {
 	messageType rpcMessageType
 	requestID   int64
 	// only for rpcResponse
@@ -213,11 +214,11 @@ type DelugeResponse struct {
 }
 
 // IsError returns true when the response is an error.
-func (dr *DelugeResponse) IsError() bool {
+func (dr *Response) IsError() bool {
 	return dr.messageType == rpcError
 }
 
-func (dr *DelugeResponse) String() string {
+func (dr *Response) String() string {
 	switch dr.messageType {
 	case rpcError:
 		return dr.RPCError.Error()
@@ -295,7 +296,7 @@ func (c *Client) Close() error {
 // Deluge2ProtocolVersion is the protocol version used with Deluge v2+
 const Deluge2ProtocolVersion = 1
 
-func (c *Client) rpc(methodName string, args rencode.List, kwargs rencode.Dictionary) (*DelugeResponse, error) {
+func (c *Client) rpc(ctx context.Context, methodName string, args rencode.List, kwargs rencode.Dictionary) (*Response, error) {
 	// generate serial
 	c.serial++
 	if c.serial == math.MaxInt64 {
@@ -413,14 +414,14 @@ func (c *Client) rpc(methodName string, args rencode.List, kwargs rencode.Dictio
 	return resp, nil
 }
 
-func (c *Client) handleRPCResponse(d *rencode.Decoder, expectedSerial int64) (*DelugeResponse, error) {
+func (c *Client) handleRPCResponse(d *rencode.Decoder, expectedSerial int64) (*Response, error) {
 	var respList rencode.List
 	err := d.Scan(&respList)
 	if err != nil {
 		return nil, err
 	}
 
-	var resp DelugeResponse
+	var resp Response
 	var mt int64
 
 	err = respList.Scan(&mt)
@@ -484,9 +485,10 @@ func (c *Client) handleRPCResponse(d *rencode.Decoder, expectedSerial int64) (*D
 }
 
 // Connect performs connection to a Deluge daemon and logs in.
-func (c *Client) Connect() error {
+func (c *Client) Connect(ctx context.Context) error {
 	dialer := new(net.Dialer)
-	rawConn, err := dialer.Dial("tcp", fmt.Sprintf("%s:%d", c.settings.Hostname, c.settings.Port))
+
+	rawConn, err := dialer.DialContext(ctx, "tcp", fmt.Sprintf("%s:%d", c.settings.Hostname, c.settings.Port))
 	if err != nil {
 		return err
 	}
@@ -497,7 +499,7 @@ func (c *Client) Connect() error {
 		c.settings.Logger.Printf("connected to %s:%d\n", c.settings.Hostname, c.settings.Port)
 	}
 
-	err = c.DaemonLogin()
+	err = c.DaemonLogin(nil)
 	if err != nil {
 		return err
 	}
@@ -510,7 +512,7 @@ func (c *Client) Connect() error {
 }
 
 // DaemonLogin performs login to the Deluge daemon.
-func (c *Client) DaemonLogin() error {
+func (c *Client) DaemonLogin(ctx context.Context) error {
 	var kwargs rencode.Dictionary
 
 	// in v2+ the client version must be specified
@@ -519,7 +521,7 @@ func (c *Client) DaemonLogin() error {
 	}
 
 	// perform login
-	resp, err := c.rpc("daemon.login", rencode.NewList(c.settings.Login, c.settings.Password), kwargs)
+	resp, err := c.rpc(ctx, "daemon.login", rencode.NewList(c.settings.Login, c.settings.Password), kwargs)
 	if err != nil {
 		return err
 	}
@@ -532,12 +534,12 @@ func (c *Client) DaemonLogin() error {
 }
 
 // MethodsList returns a list of available methods on server.
-func (c *Client) MethodsList() ([]string, error) {
-	return c.rpcWithStringsResult("daemon.get_method_list")
+func (c *Client) MethodsList(ctx context.Context) ([]string, error) {
+	return c.rpcWithStringsResult(ctx, "daemon.get_method_list")
 }
 
-func (c *Client) rpcWithStringsResult(method string) ([]string, error) {
-	resp, err := c.rpc(method, rencode.List{}, rencode.Dictionary{})
+func (c *Client) rpcWithStringsResult(ctx context.Context, method string) ([]string, error) {
+	resp, err := c.rpc(ctx, method, rencode.List{}, rencode.Dictionary{})
 	if err != nil {
 		return nil, err
 	}
@@ -558,12 +560,12 @@ func (c *Client) rpcWithStringsResult(method string) ([]string, error) {
 	return result, nil
 }
 
-func (c *Client) rpcWithDictionaryResult(methodName string, args rencode.List, kwargs rencode.Dictionary) (rencode.Dictionary, error) {
+func (c *Client) rpcWithDictionaryResult(ctx context.Context, methodName string, args rencode.List, kwargs rencode.Dictionary) (rencode.Dictionary, error) {
 	var (
 		rd rencode.Dictionary
 		ok bool
 	)
-	resp, err := c.rpc(methodName, args, kwargs)
+	resp, err := c.rpc(ctx, methodName, args, kwargs)
 	if err != nil {
 		return rd, err
 	}
@@ -584,8 +586,8 @@ func (c *Client) rpcWithDictionaryResult(methodName string, args rencode.List, k
 }
 
 // DaemonVersion returns the running daemon version.
-func (c *Client) DaemonVersion() (string, error) {
-	resp, err := c.rpc("daemon.info", rencode.List{}, rencode.Dictionary{})
+func (c *Client) DaemonVersion(ctx context.Context) (string, error) {
+	resp, err := c.rpc(ctx, "daemon.info", rencode.List{}, rencode.Dictionary{})
 	if err != nil {
 		return "", err
 	}

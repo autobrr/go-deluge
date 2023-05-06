@@ -12,9 +12,10 @@
 // along with this program; if not, write to the Free Software
 // Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
-package delugeclient
+package deluge
 
 import (
+	"context"
 	"github.com/gdm85/go-rencode"
 )
 
@@ -27,7 +28,7 @@ type TorrentStatus struct {
 	ActiveTime          int64
 	CompletedTime       int64   `rencode:"v2only"`
 	TimeAdded           float32 // most times an integer
-       LastSeenComplete    float32
+	LastSeenComplete    float64
 	DistributedCopies   float32
 	ETA                 float32 // most times an integer
 	Progress            float32 // max is 100
@@ -110,16 +111,16 @@ var statusKeys = rencode.NewList(
 	"time_added",
 	"completed_time",    // v2-only
 	"download_location", // v2-only
-       "last_seen_complete",
+	"last_seen_complete",
 	"private")
 
 // TorrentStatus returns the status of the torrent with specified hash.
-func (c *Client) TorrentStatus(hash string) (*TorrentStatus, error) {
+func (c *Client) TorrentStatus(ctx context.Context, hash string) (*TorrentStatus, error) {
 	var args rencode.List
 	args.Add(hash)
 	args.Add(statusKeys)
 
-	rd, err := c.rpcWithDictionaryResult("core.get_torrent_status", args, rencode.Dictionary{})
+	rd, err := c.rpcWithDictionaryResult(ctx, "core.get_torrent_status", args, rencode.Dictionary{})
 	if err != nil {
 		return nil, err
 	}
@@ -135,7 +136,7 @@ func (c *Client) TorrentStatus(hash string) (*TorrentStatus, error) {
 
 // TorrentsStatus returns the status of torrents matching the specified state and list of hashes.
 // Both state and list of hashes are optional.
-func (c *Client) TorrentsStatus(state TorrentState, hashes []string) (map[string]*TorrentStatus, error) {
+func (c *Client) TorrentsStatus(ctx context.Context, state TorrentState, hashes []string) (map[string]*TorrentStatus, error) {
 	var args rencode.List
 	var filterDict rencode.Dictionary
 	if len(hashes) != 0 {
@@ -147,7 +148,7 @@ func (c *Client) TorrentsStatus(state TorrentState, hashes []string) (map[string
 	args.Add(filterDict)
 	args.Add(statusKeys)
 
-	rd, err := c.rpcWithDictionaryResult("core.get_torrents_status", args, rencode.Dictionary{})
+	rd, err := c.rpcWithDictionaryResult(ctx, "core.get_torrents_status", args, rencode.Dictionary{})
 	if err != nil {
 		return nil, err
 	}
