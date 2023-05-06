@@ -72,9 +72,14 @@ func (o *Options) toDictionary(v2daemon bool) rencode.Dictionary {
 
 		if !v2daemon {
 			// map some v1 fields to the corresponding v2 field
+			// save old and new values
 			if name == "pre_allocate_storage" {
+				dict.Add(name, reflect.Indirect(f).Interface())
+
 				name = "compact_allocation"
 			} else if name == "download_location" {
+				dict.Add(name, reflect.Indirect(f).Interface())
+
 				name = "save_path"
 			}
 		}
