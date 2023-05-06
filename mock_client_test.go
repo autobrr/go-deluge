@@ -1,4 +1,4 @@
-package delugeclient
+package deluge
 
 import (
 	"bytes"

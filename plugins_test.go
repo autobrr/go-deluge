@@ -1,6 +1,9 @@
-package delugeclient
+package deluge
 
-import "testing"
+import (
+	"context"
+	"testing"
+)
 
 func TestLabelPlugin_GetLabels(t *testing.T) {
 	t.Parallel()
@@ -11,7 +14,7 @@ func TestLabelPlugin_GetLabels(t *testing.T) {
 		Client: c.(*Client),
 	}
 
-	labels, err := plugin.GetLabels()
+	labels, err := plugin.GetLabels(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}

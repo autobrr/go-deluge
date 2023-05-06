@@ -12,9 +12,10 @@
 // along with this program; if not, write to the Free Software
 // Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
-package delugeclient
+package deluge
 
 import (
+	"context"
 	"github.com/gdm85/go-rencode"
 )
 
@@ -25,8 +26,8 @@ type LabelPlugin struct {
 
 // LabelPlugin returns the label plugin if enabled or nil.
 // An error is returned if enabled plugins could not be retrieved.
-func (c *Client) LabelPlugin() (*LabelPlugin, error) {
-	plugins, err := c.GetEnabledPlugins()
+func (c *Client) LabelPlugin(ctx context.Context) (*LabelPlugin, error) {
+	plugins, err := c.GetEnabledPlugins(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -42,16 +43,16 @@ func (c *Client) LabelPlugin() (*LabelPlugin, error) {
 }
 
 // GetLabels returns a list of the available labels that can be assigned to torrents.
-func (p LabelPlugin) GetLabels() ([]string, error) {
-	return p.rpcWithStringsResult("label.get_labels")
+func (p LabelPlugin) GetLabels(ctx context.Context) ([]string, error) {
+	return p.rpcWithStringsResult(nil, "label.get_labels")
 }
 
 // SetTorrentLabel adds or replaces the label for the specified torrent.
-func (p LabelPlugin) SetTorrentLabel(hash, label string) error {
+func (p LabelPlugin) SetTorrentLabel(ctx context.Context, hash, label string) error {
 	var args rencode.List
 	args.Add(hash, label)
 
-	resp, err := p.rpc("label.set_torrent", args, rencode.Dictionary{})
+	resp, err := p.rpc(ctx, "label.set_torrent", args, rencode.Dictionary{})
 	if err != nil {
 		return err
 	}
@@ -63,11 +64,11 @@ func (p LabelPlugin) SetTorrentLabel(hash, label string) error {
 }
 
 // AddLabel adds a new label definition.
-func (p LabelPlugin) AddLabel(label string) error {
+func (p LabelPlugin) AddLabel(ctx context.Context, label string) error {
 	var args rencode.List
 	args.Add(label)
 
-	resp, err := p.rpc("label.add", args, rencode.Dictionary{})
+	resp, err := p.rpc(ctx, "label.add", args, rencode.Dictionary{})
 	if err != nil {
 		return err
 	}
@@ -79,11 +80,11 @@ func (p LabelPlugin) AddLabel(label string) error {
 }
 
 // RemoveLabel removes a label definition.
-func (p LabelPlugin) RemoveLabel(label string) error {
+func (p LabelPlugin) RemoveLabel(ctx context.Context, label string) error {
 	var args rencode.List
 	args.Add(label)
 
-	resp, err := p.rpc("label.remove", args, rencode.Dictionary{})
+	resp, err := p.rpc(ctx, "label.remove", args, rencode.Dictionary{})
 	if err != nil {
 		return err
 	}
@@ -100,7 +101,7 @@ func (p LabelPlugin) GetTorrentLabel(hash string) (string, error) {
 	args.Add(hash)
 	args.Add(rencode.NewList("label"))
 
-	rd, err := p.rpcWithDictionaryResult("core.get_torrent_status", args, rencode.Dictionary{})
+	rd, err := p.rpcWithDictionaryResult(context.Background(), "core.get_torrent_status", args, rencode.Dictionary{})
 	if err != nil {
 		return "", err
 	}
@@ -129,7 +130,7 @@ func (p LabelPlugin) GetTorrentsLabels(state TorrentState, ids []string) (map[st
 	args.Add(filterDict)
 	args.Add(rencode.NewList("label"))
 
-	rd, err := p.rpcWithDictionaryResult("core.get_torrents_status", args, rencode.Dictionary{})
+	rd, err := p.rpcWithDictionaryResult(context.Background(), "core.get_torrents_status", args, rencode.Dictionary{})
 	if err != nil {
 		return nil, err
 	}

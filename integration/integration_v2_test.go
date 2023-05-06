@@ -6,7 +6,7 @@ package main
 import (
 	"testing"
 
-	delugeclient "github.com/gdm85/go-libdeluge"
+	"github.com/autobrr/go-deluge"
 )
 
 var (
@@ -19,7 +19,7 @@ func TestKnownAccounts(t *testing.T) {
 		return
 	}
 
-	deluge := deluge.(delugeclient.V2)
+	d := deluge.(deluge.V2)
 	_, err := deluge.KnownAccounts()
 	if err != nil {
 		t.Fatal(err)

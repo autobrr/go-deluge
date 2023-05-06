@@ -1,6 +1,7 @@
-package delugeclient
+package deluge
 
 import (
+	"context"
 	"github.com/gdm85/go-rencode"
 )
 
@@ -31,11 +32,11 @@ var sessionStatusKeys = rencode.NewList(
 )
 
 // GetSessionStatus retrieves session status and statistics.
-func (c *Client) GetSessionStatus() (*SessionStatus, error) {
+func (c *Client) GetSessionStatus(ctx context.Context) (*SessionStatus, error) {
 	var args rencode.List
 	args.Add(sessionStatusKeys)
 
-	rd, err := c.rpcWithDictionaryResult("core.get_session_status", args, rencode.Dictionary{})
+	rd, err := c.rpcWithDictionaryResult(ctx, "core.get_session_status", args, rencode.Dictionary{})
 	if err != nil {
 		return nil, err
 	}

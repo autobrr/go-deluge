@@ -8,21 +8,13 @@ Go library for native RPC connection to a [Deluge](http://deluge-torrent.org) da
 
 [GNU GPL version 2](./LICENSE)
 
-# How to build
-
-This project uses Go modules. You can build it with `make`:
-
-```
-make
-```
-
 # How to use
 
-The library by itself is a Go package and needs to be embedded in an UI or CLI application.
+The library by itself is a Go package and needs to be embedded in a UI or CLI application.
 
 ```go
 	// you can use NewV1 to create a client for Deluge v1.3
-	deluge := delugeclient.NewV2(delugeclient.Settings{
+	client := deluge.NewV2(deluge.Settings{
 		Hostname:              "localhost",
 		Port:                  58846,
 		Login:                 "localclient",
@@ -30,27 +22,12 @@ The library by itself is a Go package and needs to be embedded in an UI or CLI a
 	})
 
 	// perform connection to Deluge server
-	err := deluge.Connect()
+	err := client.Connect(context.Background())
 
 	// ... use the client methods
 ```
 
 To debug the library you may want to set `DebugServerResponses` to true.
-
-## Example CLI application
-
-An example CLI application is available through:
-```
-go get github.com/gdm85/go-libdeluge/delugecli
-```
-
-Example usage:
-
-```sh
-DELUGE_PASSWORD="mypassword" bin/delugecli -add magnet:?xt=urn:btih:C1939CA413B9AFCC34EA0CF3C128574E93FF6CB0&tr=http%3A%2F%2Ftorrent.ubuntu.com%3A6969%2Fannounce
-```
-
-This will start downloading the latest Ubuntu 14.04 LTS server ISO. Multiple magnet URIs are supported as command-line arguments; run `bin/delugecli` alone to see all available options and their description.
 
 # Supported deluge versions
 
