@@ -1,21 +1,24 @@
 name: Go test
 on: [push, pull_request]
 jobs:
-  build:
-    name: Build
+  test:
+    name: Test
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
 
-    - name: Set up Go
-      uses: actions/setup-go@v4
-      with:
-        go-version: 1.20
-      id: go
+      # 1.20 is the last version to support Windows < 10, Server < 2016, and MacOS < 1.15.
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.20.3'
+          cache: true
 
-    - name: Check out repository
-      uses: actions/checkout@v3
-
-    - run: go test ./...
+      - name: Test
+        run: go test -v ./...
 
 #  integration_v2:
 #    name: Deluge v2.0.3 integration test
