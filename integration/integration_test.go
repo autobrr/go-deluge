@@ -2,7 +2,7 @@
 // +build integration
 
 // go-libdeluge v0.5.6 - a native deluge RPC client library
-// Copyright (C) 2015~2020 gdm85 - https://github.com/gdm85/go-libdeluge/
+// Copyright (C) 2015~2023 gdm85 - https://github.com/gdm85/go-libdeluge/
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
 // as published by the Free Software Foundation; either version 2
@@ -20,6 +20,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"log"
 	"os"
@@ -43,6 +44,11 @@ var (
 )
 
 func TestMain(m *testing.M) {
+	flag.Parse()
+	if testing.Verbose() {
+		settings.Logger = log.New(os.Stderr, "DELUGE: ", log.Lshortfile)
+	}
+
 	err := prepareClient(settings)
 	if err != nil {
 		log.Fatal(err)
@@ -209,7 +215,7 @@ func TestAddPauseAndRemoveTorrentFile(t *testing.T) {
 
 func printServerResponse(t *testing.T, methodName string) {
 	if len(c.DebugServerResponses) != 1 {
-		panic("BUG: expected exactly one response")
+		panic(fmt.Sprintf("BUG: expected exactly 1 response, but got %d", len(c.DebugServerResponses)))
 	}
 
 	// store response for testing/development
@@ -239,4 +245,54 @@ func TestGetSessionStatus(t *testing.T) {
 		t.Fatal(err)
 	}
 	printServerResponse(t, "GetSessionStatus")
+}
+
+func TestAddMagnetAndCheckDownloadLocation(t *testing.T) {
+	path := "/tmp/"
+	opts := delugeclient.Options{
+		DownloadLocation: &path,
+	}
+	torrentHash, err := deluge.AddTorrentMagnet(testMagnetURI, &opts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	printServerResponse(t, "AddTorrentMagnet")
+	if torrentHash == "" {
+		t.Error("torrent was not added")
+	}
+
+	torrents, err := deluge.TorrentsStatus(delugeclient.StateUnspecified, nil)
+	if err != nil {
+		t.Error(err)
+	} else {
+		printServerResponse(t, "TorrentsStatus")
+
+		found := false
+		for id, status := range torrents {
+			if id == testMagnetHash {
+				found = true
+
+				if status.DownloadLocation != path {
+					t.Errorf("expected download location to be %q, but found %q instead", path, status.DownloadLocation)
+				} else if status.DownloadLocation != status.SavePath {
+					t.Errorf("expected download location to be equal to save path, but found %q and %q instead", status.DownloadLocation, status.SavePath)
+				}
+
+				break
+			}
+		}
+		if !found {
+			t.Error("cannot find torrent")
+		}
+	}
+
+	// this is here for cleanup purposes
+	success, err := deluge.RemoveTorrent(testMagnetHash, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	printServerResponse(t, "RemoveTorrent")
+	if !success {
+		t.Error("removal failed")
+	}
 }

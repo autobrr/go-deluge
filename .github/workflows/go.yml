@@ -50,9 +50,9 @@ jobs:
 #        bash bin/deluge-integration.sh --v2
 
 #  integration_v1:
-#    name: Deluge v1.3 integration test
+#    name: Deluge v1.3.15 integration test
 #    needs: build
-#    runs-on: ubuntu-18.04
+#    runs-on: ubuntu-20.04
 #    steps:
 #
 #    - name: Download Linux build
@@ -61,7 +61,7 @@ jobs:
 #        name: linux-amd64
 #        path: bin/
 #
-#    - name: Install Deluge v1.3
+#    - name: Install Deluge v1.3.15
 #      run: |
 #        sudo bash bin/deluge-install.sh --v1
 #
