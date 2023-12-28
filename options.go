@@ -47,6 +47,7 @@ type V2Options struct {
 	SequentialDownload *bool
 	Shared             *bool
 	SuperSeeding       *bool
+	SeedMode           *bool
 }
 
 func (o *Options) toDictionary(v2daemon bool) rencode.Dictionary {
