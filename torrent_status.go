@@ -16,6 +16,7 @@ package deluge
 
 import (
 	"context"
+
 	"github.com/gdm85/go-rencode"
 )
 
@@ -40,6 +41,7 @@ type TorrentStatus struct {
 	DownloadLocation    string `rencode:"v2only"`
 	DownloadPayloadRate int64
 	Name                string
+	Hash                string
 	NextAnnounce        int64
 	NumPeers            int64
 	NumPieces           int64
@@ -88,6 +90,7 @@ var (
 		"tracker_status",
 		"next_announce",
 		"name",
+		"hash",
 		"total_size",
 		"progress",
 		"num_seeds",
