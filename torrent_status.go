@@ -27,6 +27,7 @@ import (
 // If a new field is added to this struct it should also be added to the statusKeys map.
 type TorrentStatus struct {
 	ActiveTime          int64
+	AllTimeDownload     int64
 	CompletedTime       int64   `rencode:"v2only"`
 	TimeAdded           float32 // most times an integer
 	LastSeenComplete    int64   `rencode:"v2only"`
@@ -53,6 +54,7 @@ type TorrentStatus struct {
 	TotalPeers          int64
 	TotalSeeds          int64
 	TotalSize           int64
+	TotalUploaded       int64
 	TrackerHost         string
 	TrackerStatus       string
 	UploadPayloadRate   int64
@@ -100,6 +102,8 @@ var (
 		"eta",
 		"download_payload_rate",
 		"upload_payload_rate",
+		"all_time_download",
+		"total_uploaded",
 		"ratio",
 		"distributed_copies",
 		"num_pieces",
